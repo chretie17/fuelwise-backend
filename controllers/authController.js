@@ -5,9 +5,7 @@ const jwt = require('jsonwebtoken');
 
 // Register a new user (Admin only)
 exports.registerUser = (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can add users' });
-  }
+  
 
   const { username, email, password, role } = req.body;
 
@@ -31,7 +29,6 @@ exports.registerUser = (req, res) => {
 exports.loginUser = (req, res) => {
     const { login, password } = req.body;
   
-    // Determine whether the login input is an email or username
     const isEmail = /\S+@\S+\.\S+/.test(login);
     const query = isEmail ? `SELECT * FROM users WHERE email = ?` : `SELECT * FROM users WHERE username = ?`;
   
@@ -47,10 +44,9 @@ exports.loginUser = (req, res) => {
           return res.status(401).json({ error: 'Invalid username/email or password' });
         }
   
-        // Generate a JWT token
-        const token = jwt.sign({ userId: user.id, role: user.role }, 'your_secret_key', { expiresIn: '1h' });
+        const token = jwt.sign({ userId: user.id, role: user.role }, '563f9b4f5b4c7d356ad3865ad60b67be44e42066739d75ce8022afc5a54ce5fa', { expiresIn: '24h' });
   
-        res.json({ message: 'Login successful', token, role: user.role }); // Include user role in response
+        res.json({ message: 'Login successful', token, role: user.role, userId: user.id }); 
       });
     });
   };

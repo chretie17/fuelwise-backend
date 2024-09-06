@@ -9,6 +9,8 @@ const cors = require('cors'); // Import cors
 const fuelPurchasesRoutes = require('./routes/fuelPurchases');  // Fuel Purchases Routes
 const fuelSalesRoutes = require('./routes/fuelSales');  
 const OrdersRoutes = require('./routes/orders');
+const bidsRoutes = require('./routes/bids');
+const ProcurementRoutes = require('./routes/procurement');
 // Middleware
 app.use(express.json());
 
@@ -22,6 +24,9 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/fuel-purchases', fuelPurchasesRoutes);
 app.use('/api/fuel-sales', fuelSalesRoutes);
 app.use('/api/orders', OrdersRoutes);
+app.use('/api/bids', bidsRoutes);
+app.use('/api/procurement', ProcurementRoutes);
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

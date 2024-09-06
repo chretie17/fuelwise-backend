@@ -4,7 +4,6 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// Register route (Protected: Admin only)
 router.post('/register', authenticateToken, authController.registerUser);
 
 // Login route
