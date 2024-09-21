@@ -1,60 +1,65 @@
-// controllers/fuelSalesController.js
 const db = require('../db');
 
 // Create a new fuel sale
 exports.createFuelSale = (req, res) => {
-  const { fuel_type, liters, sale_price_per_liter, sale_date } = req.body;
+  const { fuel_type, liters, sale_price_per_liter, sale_date, payment_mode } = req.body;
   const total_revenue = liters * sale_price_per_liter;
 
+  // Use sale_date as-is, assuming it is already in 'YYYY-MM-DD' format
+  const formattedSaleDate = sale_date;
+
+  // Check inventory for the fuel type
   const checkInventoryQuery = `SELECT * FROM inventory WHERE fuel_type = ?`;
   db.query(checkInventoryQuery, [fuel_type], (err, results) => {
     if (err) {
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: 'Error fetching inventory details.' });
     }
 
-    if (results.length === 0 || results[0].liters < liters) {
-      return res.status(400).json({ error: 'Not enough fuel in inventory for this sale' });
+    if (results.length === 0) {
+      return res.status(404).json({ error: `Fuel type '${fuel_type}' not found in inventory.` });
     }
 
-    const availableLiters = results[0].liters;
+    const availableLiters = parseFloat(results[0].liters);
     const inventoryId = results[0].id;
-    const supplierId = results[0].supplier_id;
-    const unitPrice = results[0].unit_price;
+
+    if (parseFloat(liters) > availableLiters) {
+      return res.status(400).json({
+        error: `Not enough fuel in inventory for this sale. Available: ${availableLiters} liters, Requested: ${liters} liters.`,
+      });
+    }
 
     const updateInventoryQuery = `UPDATE inventory SET liters = liters - ? WHERE id = ?`;
     db.query(updateInventoryQuery, [liters, inventoryId], (updateErr) => {
       if (updateErr) {
-        return res.status(500).json({ error: updateErr.message });
+        return res.status(500).json({ error: 'Error updating inventory.' });
       }
 
-      const insertSaleQuery = `INSERT INTO fuel_sales (fuel_type, liters, total_revenue, sale_price_per_liter, sale_date) VALUES (?, ?, ?, ?, ?)`;
-      db.query(insertSaleQuery, [fuel_type, liters, total_revenue, sale_price_per_liter, sale_date], (saleErr) => {
+      const insertSaleQuery = `INSERT INTO fuel_sales (fuel_type, liters, total_revenue, sale_price_per_liter, sale_date, payment_mode) VALUES (?, ?, ?, ?, ?, ?)`;
+      db.query(insertSaleQuery, [fuel_type, liters, total_revenue, sale_price_per_liter, formattedSaleDate, payment_mode], (saleErr) => {
         if (saleErr) {
-          return res.status(500).json({ error: saleErr.message });
-        }
-
-        if (availableLiters - liters < 50) {
-          const reorderLiters = 500;
-          const reorderCost = reorderLiters * unitPrice;
-
-          const reorderQuery = `INSERT INTO fuel_purchases (fuel_type, liters, total_cost, supplier_id, purchase_date) VALUES (?, ?, ?, ?, NOW())`;
-          db.query(reorderQuery, [fuel_type, reorderLiters, reorderCost, supplierId], (reorderErr) => {
-            if (reorderErr) {
-              console.error('Error reordering fuel:', reorderErr.message);
-            } else {
-              const updateInventoryAfterReorderQuery = `UPDATE inventory SET liters = liters + ? WHERE id = ?`;
-              db.query(updateInventoryAfterReorderQuery, [reorderLiters, inventoryId], (updateReorderErr) => {
-                if (updateReorderErr) {
-                  console.error('Error updating inventory after reorder:', updateReorderErr.message);
-                }
-              });
-            }
-          });
+          return res.status(500).json({ error: 'Error recording fuel sale.' });
         }
 
         res.status(201).json({ message: 'Fuel sale recorded successfully' });
       });
     });
+  });
+};
+
+// Update a fuel sale
+exports.updateFuelSale = (req, res) => {
+  const { id } = req.params;
+  const { fuel_type, liters, sale_price_per_liter, sale_date, payment_mode } = req.body;
+
+  // Use sale_date as-is
+  const formattedSaleDate = sale_date;
+  const updateSaleQuery = `UPDATE fuel_sales SET fuel_type = ?, liters = ?, sale_price_per_liter = ?, sale_date = ?, payment_mode = ? WHERE id = ?`;
+
+  db.query(updateSaleQuery, [fuel_type, liters, sale_price_per_liter, formattedSaleDate, payment_mode, id], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ message: 'Fuel sale updated successfully' });
   });
 };
 
@@ -65,21 +70,9 @@ exports.getAllFuelSales = (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
+
+    // No need for any date conversion
     res.json(results);
-  });
-};
-
-// Update a fuel sale
-exports.updateFuelSale = (req, res) => {
-  const { id } = req.params;
-  const { fuel_type, liters, sale_price_per_liter, sale_date } = req.body;
-
-  const updateSaleQuery = `UPDATE fuel_sales SET fuel_type = ?, liters = ?, sale_price_per_liter = ?, sale_date = ? WHERE id = ?`;
-  db.query(updateSaleQuery, [fuel_type, liters, sale_price_per_liter, sale_date, id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ message: 'Fuel sale updated successfully' });
   });
 };
 
