@@ -1,5 +1,8 @@
 const db = require('../db');
 
+const moment = require('moment-timezone');
+
+
 // Create a new fuel sale
 exports.createFuelSale = (req, res) => {
   const { fuel_type, liters, sale_price_per_liter, sale_date, payment_mode } = req.body;
@@ -71,8 +74,15 @@ exports.getAllFuelSales = (req, res) => {
       return res.status(500).json({ error: err.message });
     }
 
-    // No need for any date conversion
-    res.json(results);
+    // Format each sale date to the desired time zone (e.g., 'Africa/Kigali')
+    const formattedResults = results.map((sale) => {
+      return {
+        ...sale,
+        sale_date: moment.tz(sale.sale_date, 'Africa/Kigali').format('YYYY-MM-DD'), // Format date as 'YYYY-MM-DD'
+      };
+    });
+
+    res.json(formattedResults);
   });
 };
 
