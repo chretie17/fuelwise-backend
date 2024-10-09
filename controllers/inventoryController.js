@@ -1,10 +1,10 @@
 const db = require('../db');
 
-// Create a new inventory item
+// Create a new inventory item with branch
 exports.createInventoryItem = (req, res) => {
-  const { fuel_type, liters, unit_price, supplier_id, date_received } = req.body;
-  const query = `INSERT INTO inventory (fuel_type, liters, unit_price, supplier_id, date_received) VALUES (?, ?, ?, ?, ?)`;
-  db.query(query, [fuel_type, liters, unit_price, supplier_id, date_received], (err, result) => {
+  const { fuel_type, liters, unit_price, date_received, branch_id } = req.body;
+  const query = `INSERT INTO inventory (fuel_type, liters, unit_price, date_received, branch_id) VALUES (?, ?, ?, ?, ?)`;
+  db.query(query, [fuel_type, liters, unit_price, date_received, branch_id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -12,17 +12,45 @@ exports.createInventoryItem = (req, res) => {
   });
 };
 
+
+// Get inventory items by branch
+exports.getInventoryItemsByBranch = (req, res) => {
+  const { branch_id } = req.params; // branch_id will be passed as a route parameter
+  const query = `SELECT i.id, i.fuel_type, i.liters, i.unit_price, s.name as supplier_name, b.name as branch_name, i.date_received, i.date_updated 
+                 FROM inventory i 
+                 LEFT JOIN suppliers s ON i.supplier_id = s.id 
+                 LEFT JOIN branches b ON i.branch_id = b.id
+                 WHERE i.branch_id = ?`; // Only fetch inventory for the specified branch
+  db.query(query, [branch_id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    const formattedResults = formatDatesInResult(results); // Format dates
+    res.json(formattedResults);
+  });
+};
+
 // Helper function to format dates
 const formatDatesInResult = (results) => {
   return results.map(item => {
-    item.date_received = new Date(item.date_received).toLocaleDateString(); // Just the date part
+    item.date_received = new Date(item.date_received).toISOString().split('T')[0]; // Ensure date is in YYYY-MM-DD format
     if (item.date_updated) {
-      item.date_updated = new Date(item.date_updated).toLocaleDateString(); // Just the date part
+      item.date_updated = new Date(item.date_updated).toISOString().split('T')[0];
     }
     return item;
   });
 };
 
+// Get all branches
+exports.getAllBranches = (req, res) => {
+  const query = `SELECT * FROM branches`;
+  db.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(results); // Return all branches
+  });
+};
 
 // Get all inventory items
 exports.getAllInventoryItems = (req, res) => {
@@ -57,9 +85,9 @@ exports.getInventoryItemById = (req, res) => {
 // Update an inventory item by ID
 exports.updateInventoryItem = (req, res) => {
   const { id } = req.params;
-  const { fuel_type, liters, unit_price, supplier_id, date_received } = req.body;
-  const query = `UPDATE inventory SET fuel_type = ?, liters = ?, unit_price = ?, supplier_id = ?, date_received = ? WHERE id = ?`;
-  db.query(query, [fuel_type, liters, unit_price, supplier_id, date_received, id], (err, result) => {
+  const { fuel_type, liters, unit_price, date_received, branch_id } = req.body;
+  const query = `UPDATE inventory SET fuel_type = ?, liters = ?, unit_price = ?, date_received = ?, branch_id = ? WHERE id = ?`;
+  db.query(query, [fuel_type, liters, unit_price, date_received, branch_id, id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -95,7 +123,7 @@ exports.createFuelPurchase = (req, res) => {
 // Helper function to format dates for fuel purchases
 const formatFuelPurchaseDates = (results) => {
   return results.map(item => {
-    item.purchase_date = new Date(item.purchase_date).toLocaleString(); // Format to local string
+    item.purchase_date = new Date(item.purchase_date).toISOString().split('T')[0]; // Ensure proper date formatting (YYYY-MM-DD)
     return item;
   });
 };

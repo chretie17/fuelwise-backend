@@ -8,5 +8,8 @@ router.post('/', fuelSalesController.createFuelSale);          // Create
 router.get('/', fuelSalesController.getAllFuelSales);          // Read
 router.put('/:id', fuelSalesController.updateFuelSale);        // Update
 router.delete('/:id', fuelSalesController.deleteFuelSale);     // Delete
+// Assuming branch_id is passed as a query parameter
+router.get('/branch/:branch_id', fuelSalesController.getSalesByBranch);
+router.get('/all-with-branch', fuelSalesController.getAllFuelSalesWithBranch);
 
 module.exports = router;

@@ -1,10 +1,9 @@
-// controllers/usersController.js
 const db = require('../db');
 const bcrypt = require('bcryptjs');
 
-// Create a new user
+// Create a new user with optional branch association (for managers)
 exports.createUser = (req, res) => {
-  const { username, email, password, role } = req.body;
+  const { username, email, password, role, branch_id } = req.body;
 
   // Hash the password
   bcrypt.hash(password, 10, (err, hashedPassword) => {
@@ -12,8 +11,16 @@ exports.createUser = (req, res) => {
       return res.status(500).json({ error: 'Failed to hash password' });
     }
 
-    const query = `INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)`;
-    db.query(query, [username, email, hashedPassword, role], (err, result) => {
+    // If the user is a manager, associate them with a branch
+    const query = branch_id
+      ? `INSERT INTO users (username, email, password, role, branch_id) VALUES (?, ?, ?, ?, ?)`
+      : `INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)`;
+
+    const params = branch_id
+      ? [username, email, hashedPassword, role, branch_id]
+      : [username, email, hashedPassword, role];
+
+    db.query(query, params, (err, result) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -22,9 +29,11 @@ exports.createUser = (req, res) => {
   });
 };
 
-// Get all users
+// Get all users with branch info if available
 exports.getAllUsers = (req, res) => {
-  const query = `SELECT id, username, email, role FROM users`;
+  const query = `SELECT u.id, u.username, u.email, u.role, b.name as branch_name 
+                 FROM users u 
+                 LEFT JOIN branches b ON u.branch_id = b.id`;
   db.query(query, (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -33,10 +42,13 @@ exports.getAllUsers = (req, res) => {
   });
 };
 
-// Get a specific user by ID
+// Get a specific user by ID with branch info if available
 exports.getUserById = (req, res) => {
   const { id } = req.params;
-  const query = `SELECT id, username, email, role FROM users WHERE id = ?`;
+  const query = `SELECT u.id, u.username, u.email, u.role, b.name as branch_name 
+                 FROM users u 
+                 LEFT JOIN branches b ON u.branch_id = b.id 
+                 WHERE u.id = ?`;
   db.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -48,10 +60,10 @@ exports.getUserById = (req, res) => {
   });
 };
 
-// Update a user by ID
+// Update a user by ID with optional branch update for managers
 exports.updateUser = (req, res) => {
   const { id } = req.params;
-  const { username, email, password, role } = req.body;
+  const { username, email, password, role, branch_id } = req.body;
 
   // Hash the new password if provided
   if (password) {
@@ -59,22 +71,22 @@ exports.updateUser = (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Failed to hash password' });
       }
-      updateUser(id, username, email, hashedPassword, role, res);
+      updateUser(id, username, email, hashedPassword, role, branch_id, res);
     });
   } else {
-    updateUser(id, username, email, null, role, res);
+    updateUser(id, username, email, null, role, branch_id, res);
   }
 };
 
-// Helper function to update a user
-const updateUser = (id, username, email, hashedPassword, role, res) => {
+// Helper function to update a user with optional branch
+const updateUser = (id, username, email, hashedPassword, role, branch_id, res) => {
   const query = hashedPassword
-    ? `UPDATE users SET username = ?, email = ?, password = ?, role = ? WHERE id = ?`
-    : `UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?`;
+    ? `UPDATE users SET username = ?, email = ?, password = ?, role = ?, branch_id = ? WHERE id = ?`
+    : `UPDATE users SET username = ?, email = ?, role = ?, branch_id = ? WHERE id = ?`;
 
   const params = hashedPassword
-    ? [username, email, hashedPassword, role, id]
-    : [username, email, role, id];
+    ? [username, email, hashedPassword, role, branch_id, id]
+    : [username, email, role, branch_id, id];
 
   db.query(query, params, (err, result) => {
     if (err) {
@@ -93,5 +105,19 @@ exports.deleteUser = (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     res.json({ message: 'User deleted successfully' });
+  });
+};
+
+// Get all users for a specific branch
+exports.getUsersByBranch = (req, res) => {
+  const { branch_id } = req.params;
+  const query = `SELECT u.id, u.username, u.email, u.role 
+                 FROM users u 
+                 WHERE u.branch_id = ?`;
+  db.query(query, [branch_id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(results);
   });
 };

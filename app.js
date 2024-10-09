@@ -16,8 +16,8 @@ const ProcurementRoutes = require('./routes/procurement');
 const EvaluateRoutes = require('./routes/evaluation');
 const boqroutes = require('./routes/boq');
 const dashboardRoutes = require('./routes/dashboard');
-
-
+const branchRoutes = require('./routes/branch');
+const reportRoutes = require('./routes/reports');
 
 // Apply middleware
 app.use(express.json());
@@ -36,8 +36,8 @@ app.use('/api/procurement', ProcurementRoutes);
 app.use('/api/evaluation', EvaluateRoutes);
 app.use('/api/boq', boqroutes);
 app.use('/api/dashboard', dashboardRoutes);
-
-
+app.use('/api/branches', branchRoutes);
+app.use('/api/reports', reportRoutes);
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

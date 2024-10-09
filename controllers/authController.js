@@ -27,27 +27,26 @@ exports.registerUser = (req, res) => {
 // User login
 // controllers/authController.js
 exports.loginUser = (req, res) => {
-    const { login, password } = req.body;
-  
-    const isEmail = /\S+@\S+\.\S+/.test(login);
-    const query = isEmail ? `SELECT * FROM users WHERE email = ?` : `SELECT * FROM users WHERE username = ?`;
-  
-    db.query(query, [login], (err, results) => {
-      if (err || results.length === 0) {
+  const { login, password } = req.body;
+
+  const isEmail = /\S+@\S+\.\S+/.test(login);
+  const query = isEmail ? `SELECT * FROM users WHERE email = ?` : `SELECT * FROM users WHERE username = ?`;
+
+  db.query(query, [login], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(401).json({ error: 'Invalid username/email or password' });
+    }
+
+    const user = results[0];
+
+    bcrypt.compare(password, user.password, (err, isMatch) => {
+      if (err || !isMatch) {
         return res.status(401).json({ error: 'Invalid username/email or password' });
       }
-  
-      const user = results[0];
-  
-      bcrypt.compare(password, user.password, (err, isMatch) => {
-        if (err || !isMatch) {
-          return res.status(401).json({ error: 'Invalid username/email or password' });
-        }
-  
-        const token = jwt.sign({ userId: user.id, role: user.role }, '563f9b4f5b4c7d356ad3865ad60b67be44e42066739d75ce8022afc5a54ce5fa', { expiresIn: '24h' });
-  
-        res.json({ message: 'Login successful', token, role: user.role, userId: user.id }); 
-      });
+
+      const token = jwt.sign({ userId: user.id, role: user.role, branch: user.branch_id }, '563f9b4f5b4c7d356ad3865ad60b67be44e42066739d75ce8022afc5a54ce5fa', { expiresIn: '24h' });
+
+      res.json({ message: 'Login successful', token, role: user.role, userId: user.id, branch: user.branch_id });
     });
-  };
-  
+  });
+};
