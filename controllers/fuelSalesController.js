@@ -129,3 +129,26 @@ exports.getAllFuelSalesWithBranch = (req, res) => {
     res.json(results);
   });
 };
+exports.getAllFuelSalesForAdmin = (req, res) => {
+  const query = `
+    SELECT fs.id, fs.fuel_type, fs.liters, fs.total_revenue, fs.sale_price_per_liter, 
+           fs.sale_date, fs.payment_mode, fs.branch_id, b.name AS branch_name
+    FROM fuel_sales fs
+    LEFT JOIN branches b ON fs.branch_id = b.id
+    ORDER BY fs.sale_date DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error fetching all fuel sales for admin.' });
+    }
+
+    // Format sale_date for consistent readability
+    const formattedResults = results.map((sale) => ({
+      ...sale,
+      sale_date: moment.tz(sale.sale_date, 'Africa/Kigali').format('YYYY-MM-DD'),
+    }));
+
+    res.json(formattedResults);
+  });
+};

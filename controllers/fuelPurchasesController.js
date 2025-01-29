@@ -143,3 +143,22 @@ exports.getAllFuelPurchasesWithBranch = (req, res) => {
     res.json(results);
   });
 };
+
+// Get all fuel purchases with branch names (Admin view)
+exports.getAllFuelPurchasesForAdmin = (req, res) => {
+  const query = `
+    SELECT fp.id, fp.fuel_type, fp.liters, fp.total_cost, fp.purchase_date, 
+           b.name AS branch_name, fp.branch_id
+    FROM fuel_purchases fp
+    LEFT JOIN branches b ON fp.branch_id = b.id
+    ORDER BY fp.purchase_date DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error fetching fuel purchases for admin.' });
+    }
+
+    res.json(results);
+  });
+};
